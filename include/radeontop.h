@@ -36,6 +36,10 @@
 
 enum {
 	GRBM_STATUS = 0x8010,
+	// R300-class (RS400/RS480/RS482/RS485) report engine-busy in RBBM_STATUS,
+	// not the R600+ GRBM_STATUS.  0x0E40 sits inside the BAR2 SRBM map window,
+	// so the MMIO path reads it from srbm_area without a second mmap.
+	RBBM_STATUS = 0x0e40,
 	SRBM_STATUS = 0xe50,
 	SRBM_STATUS2 = 0xe4c,
 	MMAP_SIZE = 0x14,
@@ -63,6 +67,11 @@ extern int (*getgtt)(uint64_t *out);
 extern int (*getsclk)(uint32_t *out);
 extern int (*getmclk)(uint32_t *out);
 
+// Resolved chip family, set once the PCI device id is known.  The MMIO and
+// ioctl status readers consult it to pick RBBM_STATUS (R300-class) over
+// GRBM_STATUS (R600+).
+extern int chip_family;
+
 // ticks.c
 void collect(unsigned int ticks, unsigned int dumpinterval);
 
@@ -77,6 +86,7 @@ void dumpdata(const unsigned int ticks, const char file[], const unsigned int li
 // chips
 enum radeon_family {
 	UNKNOWN_CHIP,
+	RS480,
 	R600,
 	RV610,
 	RV630,

@@ -20,6 +20,7 @@
 
 const char * const family_str[] = {
 	str(UNKNOWN_CHIP),
+	str(RS480),
 	str(R600),
 	str(RV610),
 	str(RV630),

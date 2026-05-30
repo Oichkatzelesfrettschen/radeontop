@@ -46,7 +46,11 @@ static int radeon_get_drm_value(int fd, unsigned request, uint32_t *out) {
 
 #ifdef RADEON_INFO_READ_REG
 static int getgrbm_radeon(uint32_t *out) {
-	*out = GRBM_STATUS;
+	// R300-class reports engine-busy in RBBM_STATUS, not GRBM_STATUS.  At the
+	// init probe chip_family is still UNKNOWN, so the probe reads GRBM and, on
+	// R300, falls through to the /dev/mem path; the steady-state reads here use
+	// the resolved family.
+	*out = (chip_family == RS480) ? RBBM_STATUS : GRBM_STATUS;
 	return radeon_get_drm_value(drm_fd, RADEON_INFO_READ_REG, out);
 }
 
