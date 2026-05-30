@@ -344,6 +344,7 @@ int getfamily(unsigned int id) {
 
 	switch(id) {
 		#define CHIPSET(a,b,c) case a: return c;
+		#include "r300_pci_ids.h"
 		#include "r600_pci_ids.h"
 		#undef CHIPSET
 	}
