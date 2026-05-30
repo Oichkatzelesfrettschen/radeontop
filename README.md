@@ -11,6 +11,9 @@ Supported cards
 ---------------
 
 R600 and up, even Southern Islands should work fine.
+R300-class integrated graphics (RS400/RS480/RS482/RS485) are also supported:
+they report engine-busy in RBBM_STATUS rather than GRBM_STATUS, so use the mem
+path (`radeontop -m`).
 Works with both the open drivers and AMD Catalyst.
 
 For the Catalyst driver, only the mem path is currently supported - this
