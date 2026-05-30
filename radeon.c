@@ -48,8 +48,9 @@ static int radeon_get_drm_value(int fd, unsigned request, uint32_t *out) {
 static int getgrbm_radeon(uint32_t *out) {
 	// R300-class reports engine-busy in RBBM_STATUS, not GRBM_STATUS.  At the
 	// init probe chip_family is still UNKNOWN, so the probe reads GRBM and, on
-	// R300, falls through to the /dev/mem path; the steady-state reads here use
-	// the resolved family.
+	// R300, falls through to the /dev/mem path.  The steady-state reads here use
+	// the resolved family once the DRM read-reg path is active; RS4xx render
+	// nodes may still reject 0x0E40 and keep the BAR2 fallback in place.
 	*out = (chip_family == RS480) ? RBBM_STATUS : GRBM_STATUS;
 	return radeon_get_drm_value(drm_fd, RADEON_INFO_READ_REG, out);
 }
