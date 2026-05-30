@@ -29,7 +29,7 @@ static void version() {
 }
 
 static void help(const char * const me, const unsigned int ticks, const unsigned int dumpinterval) {
-	printf(_("\n\tRadeonTop for R600 and above.\n\n"
+	printf(_("\n\tRadeonTop for R600 and above, plus R300-class IGPs (RS4xx, use -m).\n\n"
 		"\tUsage: %s [-chmv] [-b bus] [-d file] [-i seconds] [-l limit] [-p device] [-t ticks]\n\n"
 		"-b --bus 3		Pick card from this PCI bus (hexadecimal)\n"
 		"-c --color		Enable colors\n"
