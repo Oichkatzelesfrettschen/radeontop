@@ -23,6 +23,7 @@
 #include <errno.h>
 
 struct bits_t bits;
+int chip_family = UNKNOWN_CHIP;
 uint64_t vramsize;
 uint64_t gttsize;
 unsigned int sclk_max = 0; // kilohertz
@@ -78,6 +79,13 @@ static int getgrbm_pci(uint32_t *out) {
 	return 0;
 }
 
+// R300-class engine-busy is RBBM_STATUS (0x0E40), inside the BAR2 SRBM window,
+// so it reads from srbm_area without a second mmap.
+static int getgrbm_pci_r300(uint32_t *out) {
+	*out = *(uint32_t *)((const char *) srbm_area + RBBM_STATUS);
+	return 0;
+}
+
 static int getsrbm_pci(uint32_t *out) {
 	*out = *(uint32_t *)((const char *) srbm_area + SRBM_STATUS);
 	return 0;
@@ -109,6 +117,8 @@ static void open_pci(struct pci_device *gpu_device) {
 	if (srbm_area == MAP_FAILED) die(_("mmap failed"));
 
 	getgrbm = getgrbm_pci;
+	if (getfamily(gpu_device->device_id) == RS480)
+		getgrbm = getgrbm_pci_r300;
 	getsrbm = getsrbm_pci;
 	getsrbm2 = getsrbm2_pci;
 }
@@ -342,6 +352,24 @@ int getfamily(unsigned int id) {
 }
 
 void initbits(int fam) {
+
+	if (fam == RS480) {
+		// R300-class RBBM_STATUS (0x0E40) engine-busy layout, shared by
+		// RS400/RS480/RS482/RS485.  Map the R300 blocks onto radeontop's
+		// gauges; bits with no R300 analogue stay zero.
+		bits.gui = (1U << 31);  // GUI_ACTIVE -- any 2D/3D engine running
+		bits.vgt = (1U << 20);  // VAP_BUSY -- vertex assembly front-end
+		bits.pa  = (1U << 26);  // GA_BUSY -- geometry/primitive setup
+		bits.sc  = (1U << 21);  // RE_BUSY -- rasterizer (scan converter)
+		bits.ta  = (1U << 22) | (1U << 23) | (1U << 25);  // TAM|TDM|TIM
+		bits.cb  = (1U << 19);  // RB3D_BUSY -- render backend, colour writeback
+		bits.db  = (1U << 19);  // RB3D also drives depth writeback
+		bits.ee  = (1U << 16);  // CP_CMDSTRM_BUSY -- IB/command stream executing
+		bits.tc = bits.sx = bits.sh = bits.spi = bits.smx = bits.cr = 0;
+		bits.uvd = 0;   // RS482 has no UVD -- the 3D pipe is the only decoder
+		bits.vce0 = 0;  // no VCE
+		return;
+	}
 
 	// The majority of these is the same from R600 to Southern Islands.
 
