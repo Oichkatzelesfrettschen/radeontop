@@ -46,11 +46,13 @@ static int radeon_get_drm_value(int fd, unsigned request, uint32_t *out) {
 
 #ifdef RADEON_INFO_READ_REG
 static int getgrbm_radeon(uint32_t *out) {
-	// R300-class reports engine-busy in RBBM_STATUS, not GRBM_STATUS.  At the
-	// init probe chip_family is still UNKNOWN, so the probe reads GRBM and, on
-	// R300, falls through to the /dev/mem path; the steady-state reads here use
-	// the resolved family.
-	*out = (chip_family == RS480) ? RBBM_STATUS : GRBM_STATUS;
+	// RADEON_INFO_READ_REG is gated per-asic by get_allowed_info_register.  For
+	// the whole pre-R600 family (r100..rs480 in radeon_asic.c) that callback is
+	// radeon_invalid_get_allowed_info_register, which returns -EINVAL for every
+	// register -- so this libdrm path binds only on R600+, where engine-busy is
+	// GRBM_STATUS.  R300-class engine-busy (RBBM_STATUS) is read through the PCI
+	// BAR path (getgrbm_pci_r300) instead, never here.
+	*out = GRBM_STATUS;
 	return radeon_get_drm_value(drm_fd, RADEON_INFO_READ_REG, out);
 }
 

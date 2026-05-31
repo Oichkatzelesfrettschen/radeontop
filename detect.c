@@ -23,7 +23,6 @@
 #include <errno.h>
 
 struct bits_t bits;
-int chip_family = UNKNOWN_CHIP;
 uint64_t vramsize;
 uint64_t gttsize;
 unsigned int sclk_max = 0; // kilohertz
