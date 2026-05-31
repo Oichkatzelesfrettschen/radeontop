@@ -106,8 +106,8 @@ static void open_pci(struct pci_device *gpu_device) {
 //	printf("Found area %p, size %lu\n", area, dev->regions[reg].size);
 
 	// Map the register BAR through the PCI sysfs resourceN node rather than
-	// /dev/mem.  CONFIG_STRICT_DEVMEM (default on current kernels) refuses
-	// /dev/mem access to device MMIO, so the legacy path dies on modern installs;
+	// /dev/mem.  Modern kernels refuse /dev/mem access to driver-claimed device
+	// MMIO (the STRICT_DEVMEM / IO_STRICT_DEVMEM family), so the legacy path dies;
 	// the resourceN file is the BAR aperture itself.  Its file offset is therefore
 	// BAR-relative (no base_addr term), and MAP_SHARED makes reads hit the device.
 	// Only scalar fields of the freed gpu_device copy are read here.
@@ -120,16 +120,25 @@ static void open_pci(struct pci_device *gpu_device) {
 	int mem = open(respath, O_RDONLY);
 	if (mem < 0) die(_("Cannot access GPU registers, are you root?"));
 
-	area = mmap(NULL, MMAP_SIZE, PROT_READ, MAP_SHARED, mem, 0x8000);
-	if (area == MAP_FAILED) die(_("mmap failed"));
+	// RBBM_STATUS and the SRBM window sit at BAR offset 0; the GRBM status
+	// window is at 0x8000.  Map offset 0 for every family.
 	srbm_area = mmap(NULL, SRBM_MMAP_SIZE, PROT_READ, MAP_SHARED, mem, 0);
 	if (srbm_area == MAP_FAILED) die(_("mmap failed"));
 
+	if (getfamily(gpu_device->device_id) == RS480) {
+		// R300-class engine-busy is RBBM_STATUS (0x0E40) in the offset-0 window
+		// mapped above.  The GRBM window at 0x8000 is an R600+ construct, unused
+		// here, so it is not mapped -- and a resourceN mmap of 0x8000 would fail
+		// outright if the r300 register BAR is smaller than that.
+		getgrbm = getgrbm_pci_r300;
+	} else {
+		area = mmap(NULL, MMAP_SIZE, PROT_READ, MAP_SHARED, mem, 0x8000);
+		if (area == MAP_FAILED) die(_("mmap failed"));
+		getgrbm = getgrbm_pci;
+	}
+
 	close(mem);
 
-	getgrbm = getgrbm_pci;
-	if (getfamily(gpu_device->device_id) == RS480)
-		getgrbm = getgrbm_pci_r300;
 	getsrbm = getsrbm_pci;
 	getsrbm2 = getsrbm2_pci;
 }
