@@ -67,11 +67,6 @@ extern int (*getgtt)(uint64_t *out);
 extern int (*getsclk)(uint32_t *out);
 extern int (*getmclk)(uint32_t *out);
 
-// Resolved chip family, set once the PCI device id is known.  The MMIO and
-// ioctl status readers consult it to pick RBBM_STATUS (R300-class) over
-// GRBM_STATUS (R600+).
-extern int chip_family;
-
 // ticks.c
 void collect(unsigned int ticks, unsigned int dumpinterval);
 
