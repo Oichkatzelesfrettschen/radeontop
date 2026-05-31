@@ -323,7 +323,8 @@ void init_pci(const char *path, short *bus, unsigned int *device_id, const unsig
 	// This is the fallback method for older libdrm that doesn't
 	// have drmGetDevices, operating systems where drmGetDevices
 	// is not implemented, older radeon kernel driver without GRBM
-	// readings, AMD Catalyst driver or when no driver is loaded
+	// readings, RS4xx/r300-class lanes where DRM read-reg rejects
+	// RBBM_STATUS, AMD Catalyst driver or when no driver is loaded.
 	if (getgrbm == getuint32_null) {
 		struct pci_device pci_dev;
 		memset(&pci_dev, 0, sizeof(struct pci_device));

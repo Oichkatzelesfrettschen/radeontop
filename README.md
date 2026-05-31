@@ -12,8 +12,12 @@ Supported cards
 
 R600 and up, even Southern Islands should work fine.
 R300-class integrated graphics (RS400/RS480/RS482/RS485) are also supported:
-they report engine-busy in RBBM_STATUS rather than GRBM_STATUS, so use the mem
-path (`radeontop -m`).
+they report engine-busy in `RBBM_STATUS` rather than `GRBM_STATUS`.  RadeonTop
+first tries the radeon DRM read-reg path and falls back to the BAR2 `/dev/mem`
+path when that ioctl does not expose `0x0E40`; `radeontop -m` forces the BAR2
+path directly.  On this class the total GPU gauge is the reliable signal and
+the per-block gauges are a coarse R300-family map, not the richer R600+
+counter set.
 Works with both the open drivers and AMD Catalyst.
 
 For the Catalyst driver, only the mem path is currently supported - this
