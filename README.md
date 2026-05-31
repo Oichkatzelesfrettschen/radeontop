@@ -3,7 +3,7 @@ RadeonTop
 
 View your GPU utilization, both for the total activity percent and individual blocks.
 
-Requires access to /dev/dri/cardN files or /dev/mem (root privileges).
+Requires access to /dev/dri/cardN files or the PCI sysfs resourceN node (root privileges).
 
 ![Screenshot from 2019-10-19 01-34-50_cut](https://user-images.githubusercontent.com/11575/67134324-fdec5300-f211-11e9-8597-394d9c062fe7.png)
 
@@ -12,16 +12,16 @@ Supported cards
 
 R600 and up, even Southern Islands should work fine.
 R300-class integrated graphics (RS400/RS480/RS482/RS485) are also supported:
-they report engine-busy in `RBBM_STATUS` rather than `GRBM_STATUS`.  RadeonTop
-first tries the radeon DRM read-reg path and falls back to the BAR2 `/dev/mem`
-path when that ioctl does not expose `0x0E40`; `radeontop -m` forces the BAR2
-path directly.  On this class the total GPU gauge is the reliable signal and
-the per-block gauges are a coarse R300-family map, not the richer R600+
-counter set.
+they report engine-busy in `RBBM_STATUS` rather than `GRBM_STATUS`.  The radeon
+DRM read-reg ioctl rejects every register on this pre-R600 class, so RadeonTop
+reads `RBBM_STATUS` (`0x0E40`) directly through the BAR2 PCI sysfs resourceN
+node; `radeontop -m` forces that path on any card.  On this class the total GPU
+gauge is the reliable signal and the per-block gauges are a coarse R300-family
+map, not the richer R600+ counter set.
 Works with both the open drivers and AMD Catalyst.
 
-For the Catalyst driver, only the mem path is currently supported - this
-means it won't run on the default Ubuntu kernels that block /dev/mem.
+For the Catalyst driver, only the direct-MMIO path is supported, read through
+the PCI sysfs resourceN node.
 
 The total GPU utilization is also valid for OpenCL loads; the other blocks
 are only useful in GL loads.
