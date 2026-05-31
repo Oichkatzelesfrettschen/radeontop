@@ -106,15 +106,27 @@ static void open_pci(struct pci_device *gpu_device) {
 
 //	printf("Found area %p, size %lu\n", area, dev->regions[reg].size);
 
-	int mem = open("/dev/mem", O_RDONLY);
+	// Map the register BAR through the PCI sysfs resourceN node rather than
+	// /dev/mem.  CONFIG_STRICT_DEVMEM (default on current kernels) refuses
+	// /dev/mem access to device MMIO, so the legacy path dies on modern installs;
+	// the resourceN file is the BAR aperture itself.  Its file offset is therefore
+	// BAR-relative (no base_addr term), and MAP_SHARED makes reads hit the device.
+	// Only scalar fields of the freed gpu_device copy are read here.
+	char respath[64];
+	snprintf(respath, sizeof(respath),
+			"/sys/bus/pci/devices/%04x:%02x:%02x.%u/resource%d",
+			gpu_device->domain_16, gpu_device->bus, gpu_device->dev,
+			gpu_device->func, reg);
+
+	int mem = open(respath, O_RDONLY);
 	if (mem < 0) die(_("Cannot access GPU registers, are you root?"));
 
-	area = mmap(NULL, MMAP_SIZE, PROT_READ, MAP_PRIVATE, mem,
-			gpu_device->regions[reg].base_addr + 0x8000);
+	area = mmap(NULL, MMAP_SIZE, PROT_READ, MAP_SHARED, mem, 0x8000);
 	if (area == MAP_FAILED) die(_("mmap failed"));
-	srbm_area = mmap(NULL, SRBM_MMAP_SIZE, PROT_READ, MAP_PRIVATE, mem,
-			gpu_device->regions[reg].base_addr);
+	srbm_area = mmap(NULL, SRBM_MMAP_SIZE, PROT_READ, MAP_SHARED, mem, 0);
 	if (srbm_area == MAP_FAILED) die(_("mmap failed"));
+
+	close(mem);
 
 	getgrbm = getgrbm_pci;
 	if (getfamily(gpu_device->device_id) == RS480)
@@ -314,7 +326,7 @@ void init_pci(const char *path, short *bus, unsigned int *device_id, const unsig
 			open_drm_bus(&pci_dev);
 
 			if (forcemem)
-				printf(_("Forcing the /dev/mem path.\n"));
+				printf(_("Forcing the direct MMIO register path.\n"));
 
 			if (forcemem || getgrbm == getuint32_null)
 				open_pci(&pci_dev);
