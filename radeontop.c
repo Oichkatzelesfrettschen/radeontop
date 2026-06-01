@@ -36,7 +36,7 @@ static void help(const char * const me, const unsigned int ticks, const unsigned
 		"-d --dump file		Dump data to this file, - for stdout\n"
 		"-i --dump-interval 1	Number of seconds between dumps (default %u)\n"
 		"-l --limit 3		Quit after dumping N lines, default forever\n"
-		"-m --mem		Force the /dev/mem path, for the proprietary driver\n"
+		"-m --mem		Force the PCI sysfs resourceN MMIO path, for the proprietary driver\n"
 		"-p --path device	Open DRM device node by path\n"
 		"-t --ticks 50		Samples per second (default %u)\n"
 		"-T --transparency	Enable transparency\n"

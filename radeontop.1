@@ -36,7 +36,7 @@ radeontop \- tool to show GPU utilization
 .sp
 RadeonTop shows the utilization of your GPU, both in general and by blocks\&.
 .sp
-Supported cards are R600 and up, plus R300\-class IGPs (RS400/RS480/RS482/RS485) via the mem path (\-m), which read engine\-busy from RBBM_STATUS\&.
+Supported cards are R600 and up, plus R300\-class IGPs (RS400/RS480/RS482/RS485) via the mem path (\-m), which read engine\-busy from RBBM_STATUS\&. Dump mode on RS480\-class systems also emits a one\-line # header with AGP_BASE_2, GART_FEATURE_ID, and GART_BASE when the steinmarder radeon_rs480_candidate_gart_mc_regs debugfs surface is present and readable\&.
 .SH "OPTIONS"
 .PP
 \fB\-b, \-\-bus \fR\fB\fIbus\fR\fR
@@ -88,7 +88,7 @@ for graceful termination\&.
 .PP
 \fB\-m, \-\-mem\fR
 .RS 4
-Forces the use of the /dev/mem path, in case autodetection fails\&. Useful for the proprietary driver\&.
+Forces the use of the PCI sysfs resourceN MMIO path, in case autodetection fails\&. Useful for the proprietary driver\&.
 .RE
 .PP
 \fB\-p, \-\-path \fR\fB\fIdevice\fR\fR

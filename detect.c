@@ -27,6 +27,7 @@ uint64_t vramsize;
 uint64_t gttsize;
 unsigned int sclk_max = 0; // kilohertz
 unsigned int mclk_max = 0; // kilohertz
+struct rs480_gart_observed_t rs480_gart_observed;
 const void *area;
 static const void *srbm_area;
 
@@ -95,6 +96,45 @@ static int getsrbm2_pci(uint32_t *out) {
 	return 0;
 }
 
+static void init_rs480_gart_observed(void) {
+	static const char path[] = "/sys/kernel/debug/radeon_rs480_candidate_gart_mc_regs";
+	FILE *f = fopen(path, "r");
+	char line[256];
+	unsigned int found = 0;
+
+	rs480_gart_observed.valid = 0;
+	if (!f)
+		return;
+
+	while (fgets(line, sizeof(line), f)) {
+		char *sep = strstr(line, " = ");
+		char *end = NULL;
+		unsigned long value;
+
+		if (!sep)
+			continue;
+
+		errno = 0;
+		value = strtoul(sep + 3, &end, 0);
+		if (errno || end == sep + 3 || value > UINT32_MAX)
+			continue;
+
+		if (!strncmp(line, "AGP_BASE_2", strlen("AGP_BASE_2"))) {
+			rs480_gart_observed.agp_base_2 = (uint32_t) value;
+			found |= 1U << 0;
+		} else if (!strncmp(line, "GART_FEATURE_ID", strlen("GART_FEATURE_ID"))) {
+			rs480_gart_observed.gart_feature_id = (uint32_t) value;
+			found |= 1U << 1;
+		} else if (!strncmp(line, "GART_BASE", strlen("GART_BASE"))) {
+			rs480_gart_observed.gart_base = (uint32_t) value;
+			found |= 1U << 2;
+		}
+	}
+
+	fclose(f);
+	rs480_gart_observed.valid = (found == 0x7);
+}
+
 static void open_pci(struct pci_device *gpu_device) {
 	// Warning: gpu_device is a copy of a freed struct. Do not access any pointers!
 	int reg = 2;
@@ -131,6 +171,10 @@ static void open_pci(struct pci_device *gpu_device) {
 		// here, so it is not mapped -- and a resourceN mmap of 0x8000 would fail
 		// outright if the r300 register BAR is smaller than that.
 		getgrbm = getgrbm_pci_r300;
+		// This debugfs file is provided by the steinmarder RS480 candidate-regs
+		// lane, not stock upstream radeon.  When it exists, capture the static
+		// GART/MC observations once before dropping privileges.
+		init_rs480_gart_observed();
 	} else {
 		area = mmap(NULL, MMAP_SIZE, PROT_READ, MAP_SHARED, mem, 0x8000);
 		if (area == MAP_FAILED) die(_("mmap failed"));

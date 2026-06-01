@@ -177,6 +177,15 @@ extern uint64_t gttsize;
 extern unsigned int sclk_max;
 extern unsigned int mclk_max;
 
+struct rs480_gart_observed_t {
+	unsigned char valid;
+	uint32_t agp_base_2;
+	uint32_t gart_feature_id;
+	uint32_t gart_base;
+};
+
+extern struct rs480_gart_observed_t rs480_gart_observed;
+
 // radeon.c
 void init_radeon(int fd, int drm_major, int drm_minor);
 

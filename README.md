@@ -17,7 +17,10 @@ DRM read-reg ioctl rejects every register on this pre-R600 class, so RadeonTop
 reads `RBBM_STATUS` (`0x0E40`) directly through the BAR2 PCI sysfs resourceN
 node; `radeontop -m` forces that path on any card.  On this class the total GPU
 gauge is the reliable signal and the per-block gauges are a coarse R300-family
-map, not the richer R600+ counter set.
+map, not the richer R600+ counter set.  In dump mode, RS480-class systems also
+emit a one-line `#` header with `AGP_BASE_2`, `GART_FEATURE_ID`, and
+`GART_BASE` when the steinmarder `radeon_rs480_candidate_gart_mc_regs` debugfs
+surface is present and readable.
 Works with both the open drivers and AMD Catalyst.
 
 For the Catalyst driver, only the direct-MMIO path is supported, read through

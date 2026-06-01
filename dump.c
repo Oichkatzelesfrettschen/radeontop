@@ -66,6 +66,16 @@ void dumpdata(const unsigned int ticks, const char file[], const unsigned int li
 	while(!results)
 		usleep(16000);
 
+	if (rs480_gart_observed.valid) {
+		fprintf(f,
+			"# bus %02x, rs480 candidate_gart_mc agp_base_2 0x%08x, gart_feature_id 0x%08x, gart_base 0x%08x\n",
+			bus,
+			rs480_gart_observed.agp_base_2,
+			rs480_gart_observed.gart_feature_id,
+			rs480_gart_observed.gart_base);
+		fflush(f);
+	}
+
 	// Action
 	unsigned int count;
 
