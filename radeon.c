@@ -110,16 +110,20 @@ void init_radeon(int fd, int drm_major, int drm_minor) {
 						&sclk_max)))
 			drmError(ret, _("Failed to get maximum shader clock"));
 
-		mclk_max = 0;	// no max memory clock info on radeon
-
 		if (!(ret = getsclk_radeon(&out32)))
 			getsclk = getsclk_radeon;
 		else
 			drmError(ret, _("Failed to get shader clock"));
 
-		if (!(ret = getmclk_radeon(&out32)))
+		if (!(ret = getmclk_radeon(&out32))) {
 			getmclk = getmclk_radeon;
-		else
+			// radeon has no MAX_MCLK query.  On the fixed-clock
+			// pre-DPM parts the current memory clock IS the nominal
+			// one, so seed the maximum from the first sample; a zero
+			// maximum renders as a division-by-zero "inf%".  The
+			// ioctl reports megahertz, mclk_max holds kilohertz.
+			mclk_max = out32 * 1000;
+		} else
 			drmError(ret, _("Failed to get memory clock"));
 	} else
 		fprintf(stderr, _("GPU usage reporting via libdrm is disabled (radeon kernel driver 2.42.0 required), attempting memory path\n"));
