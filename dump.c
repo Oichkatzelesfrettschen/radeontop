@@ -108,6 +108,9 @@ void dumpdata(const unsigned int ticks, const char file[], const unsigned int li
 		float cb = 100 * results->cb * k;
 		float uvd = 100 * results->uvd * k;
 		float vce0 = 100 * results->vce0 * k;
+		float cp = 100 * results->cp * k;
+		float e2 = 100 * results->e2 * k;
+		float rb2d = 100 * results->rb2d * k;
 		float vram = 100.0f * results->vram / vramsize;
 		float vrammb = results->vram / 1024.0f / 1024.0f;
 		float gtt = 100.0f * results->gtt / gttsize;
@@ -117,17 +120,26 @@ void dumpdata(const unsigned int ticks, const char file[], const unsigned int li
 		float mclk_ghz = results->mclk * k / 1000.0f;
 		float sclk_ghz = results->sclk * k / 1000.0f;
 
+		// A zero mask means the block either does not exist on this
+		// family or its busy bit never asserts on the silicon; printing
+		// a perpetual 0.00%% gauge for it would mislead, so every lane a
+		// family can lack is gated on its mask.
 		fprintf(f, "gpu %.2f%%, ", gui);
 		fprintf(f, "ee %.2f%%, ", ee);
 		fprintf(f, "vgt %.2f%%, ", vgt);
-		fprintf(f, "ta %.2f%%, ", ta);
+
+		if (bits.ta)
+			fprintf(f, "ta %.2f%%, ", ta);
 
 		if (bits.tc)
 			fprintf(f, "tc %.2f%%, ", tc);
 
-		fprintf(f, "sx %.2f%%, ", sx);
-		fprintf(f, "sh %.2f%%, ", sh);
-		fprintf(f, "spi %.2f%%, ", spi);
+		if (bits.sx)
+			fprintf(f, "sx %.2f%%, ", sx);
+		if (bits.sh)
+			fprintf(f, "sh %.2f%%, ", sh);
+		if (bits.spi)
+			fprintf(f, "spi %.2f%%, ", spi);
 
 		if (bits.smx)
 			fprintf(f, "smx %.2f%%, ", smx);
@@ -135,10 +147,19 @@ void dumpdata(const unsigned int ticks, const char file[], const unsigned int li
 		if (bits.cr)
 			fprintf(f, "cr %.2f%%, ", cr);
 
-		fprintf(f, "sc %.2f%%, ", sc);
-		fprintf(f, "pa %.2f%%, ", pa);
-		fprintf(f, "db %.2f%%, ", db);
-		fprintf(f, "cb %.2f%%", cb);
+		if (bits.sc)
+			fprintf(f, "sc %.2f%%, ", sc);
+		fprintf(f, "pa %.2f%%", pa);
+		if (bits.db)
+			fprintf(f, ", db %.2f%%", db);
+		if (bits.cb)
+			fprintf(f, ", cb %.2f%%", cb);
+		if (bits.cp)
+			fprintf(f, ", cp %.2f%%", cp);
+		if (bits.e2)
+			fprintf(f, ", e2 %.2f%%", e2);
+		if (bits.rb2d)
+			fprintf(f, ", rb2d %.2f%%", rb2d);
 		if (bits.uvd)
 			fprintf(f, ", uvd %.2f%%", uvd);
 		if (bits.vce0)

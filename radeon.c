@@ -90,7 +90,7 @@ static int getgtt_radeon(uint64_t *out) {
 #define DRM_ATLEAST_VERSION(maj, min) \
 	(drm_major > maj || (drm_major == maj && drm_minor >= min))
 
-void init_radeon(int fd, int drm_major, int drm_minor) {
+void init_radeon(int fd, int drm_major, int drm_minor, int family) {
 	int ret;
 	uint32_t out32 __attribute__((unused));
 	uint64_t out64 __attribute__((unused));
@@ -99,7 +99,14 @@ void init_radeon(int fd, int drm_major, int drm_minor) {
 
 #ifdef RADEON_INFO_READ_REG
 	if (DRM_ATLEAST_VERSION(2, 42)) {
-		if (!(ret = getgrbm_radeon(&out32))) {
+		// Pre-R600 families reject RADEON_INFO_READ_REG for every
+		// register by design (radeon_invalid_get_allowed_info_register),
+		// so probing would only print a misleading EINVAL error; the
+		// R300-class engine-busy read binds through the PCI BAR path
+		// instead.  An unknown family keeps the probe.
+		if (family != UNKNOWN_CHIP && family < R600) {
+			;
+		} else if (!(ret = getgrbm_radeon(&out32))) {
 			getgrbm = getgrbm_radeon;
 			getsrbm = getsrbm_radeon;
 			getsrbm2 = getsrbm2_radeon;

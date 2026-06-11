@@ -153,6 +153,9 @@ void present(const unsigned int ticks, const char card[], unsigned int color,
 		float cb = 100 * results->cb * k;
 		float uvd = 100 * results->uvd * k;
 		float vce0 = 100 * results->vce0 * k;
+		float cp = 100 * results->cp * k;
+		float e2 = 100 * results->e2 * k;
+		float rb2d = 100 * results->rb2d * k;
 		float vram = 100.0f * results->vram / vramsize;
 		float vrammb = results->vram / 1024.0f / 1024.0f;
 		float vramsizemb = vramsize / 1024.0f / 1024.0f;
@@ -189,9 +192,14 @@ void present(const unsigned int ticks, const char card[], unsigned int color,
 		// Enough height?
 		if (h > bigh) start++;
 
+		// A zero mask means the block either does not exist on this
+		// family or its busy bit never asserts on the silicon, so the
+		// row is dropped rather than rendered as a perpetual 0.00%.
 		if (color) attron(COLOR_PAIR(3));
-		percentage(start, w, ta);
-		printright(start++, hw, _("Texture Addresser %6.2f%%"), ta);
+		if (bits.ta) {
+			percentage(start, w, ta);
+			printright(start++, hw, _("Texture Addresser %6.2f%%"), ta);
+		}
 
 		// This is only present on R600
 		if (bits.tc) {
@@ -204,14 +212,20 @@ void present(const unsigned int ticks, const char card[], unsigned int color,
 		if (h > bigh) start++;
 
 		if (color) attron(COLOR_PAIR(4));
-		percentage(start, w, sx);
-		printright(start++, hw, _("Shader Export %6.2f%%"), sx);
+		if (bits.sx) {
+			percentage(start, w, sx);
+			printright(start++, hw, _("Shader Export %6.2f%%"), sx);
+		}
 
-		percentage(start, w, sh);
-		printright(start++, hw, _("Sequencer Instruction Cache %6.2f%%"), sh);
+		if (bits.sh) {
+			percentage(start, w, sh);
+			printright(start++, hw, _("Sequencer Instruction Cache %6.2f%%"), sh);
+		}
 
-		percentage(start, w, spi);
-		printright(start++, hw, _("Shader Interpolator %6.2f%%"), spi);
+		if (bits.spi) {
+			percentage(start, w, spi);
+			printright(start++, hw, _("Shader Interpolator %6.2f%%"), spi);
+		}
 
 		// only on R600
 		if (bits.smx) {
@@ -223,8 +237,10 @@ void present(const unsigned int ticks, const char card[], unsigned int color,
 		// Enough height?
 		if (h > bigh) start++;
 
-		percentage(start, w, sc);
-		printright(start++, hw, _("Scan Converter %6.2f%%"), sc);
+		if (bits.sc) {
+			percentage(start, w, sc);
+			printright(start++, hw, _("Scan Converter %6.2f%%"), sc);
+		}
 
 		percentage(start, w, pa);
 		printright(start++, hw, _("Primitive Assembly %6.2f%%"), pa);
@@ -233,11 +249,15 @@ void present(const unsigned int ticks, const char card[], unsigned int color,
 		if (h > bigh) start++;
 
 		if (color) attron(COLOR_PAIR(5));
-		percentage(start, w, db);
-		printright(start++, hw, _("Depth Block %6.2f%%"), db);
+		if (bits.db) {
+			percentage(start, w, db);
+			printright(start++, hw, _("Depth Block %6.2f%%"), db);
+		}
 
-		percentage(start, w, cb);
-		printright(start++, hw, _("Color Block %6.2f%%"), cb);
+		if (bits.cb) {
+			percentage(start, w, cb);
+			printright(start++, hw, _("Color Block %6.2f%%"), cb);
+		}
 
 		// Only present on R600
 		if (bits.cr) {
@@ -246,6 +266,18 @@ void present(const unsigned int ticks, const char card[], unsigned int color,
 		}
 		if (color) attroff(COLOR_PAIR(5));
 
+		if (bits.cp) {
+			percentage(start, w, cp);
+			printright(start++, hw, _("Command Stream %6.2f%%"), cp);
+		}
+		if (bits.e2) {
+			percentage(start, w, e2);
+			printright(start++, hw, _("2D Engine %6.2f%%"), e2);
+		}
+		if (bits.rb2d) {
+			percentage(start, w, rb2d);
+			printright(start++, hw, _("2D Backend %6.2f%%"), rb2d);
+		}
 		if (bits.uvd) {
 			percentage(start, w, uvd);
 			printright(start++, hw, _("UVD %6.2f%%"), uvd);
