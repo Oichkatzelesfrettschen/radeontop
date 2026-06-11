@@ -192,8 +192,14 @@ static void cleanup_pci() {
 	munmap((void *) srbm_area, SRBM_MMAP_SIZE);
 }
 
+#ifdef HAS_DRMGETDEVICE
+static void device_info_drm(int fd, short *bus, unsigned int *device_id);
+#endif
+static int getuint64_null(uint64_t *out);
+
 static int init_drm(int drm_fd) {
 	drmVersionPtr ver = drmGetVersion(drm_fd);
+	int family = UNKNOWN_CHIP;
 
 	if (!ver) {
 		perror(_("Failed to query driver version"));
@@ -203,8 +209,20 @@ static int init_drm(int drm_fd) {
 
 	authenticate_drm(drm_fd);
 
+#ifdef HAS_DRMGETDEVICE
+	// Resolve the family up front so init_radeon can skip probes the
+	// kernel rejects by design on this part (pre-R600 returns -EINVAL
+	// for every RADEON_INFO_READ_REG register).
+	{
+		short bus_unused = -1;
+		unsigned int device_id = 0;
+		device_info_drm(drm_fd, &bus_unused, &device_id);
+		family = getfamily(device_id);
+	}
+#endif
+
 	if (strcmp(ver->name, "radeon") == 0)
-		init_radeon(drm_fd, ver->version_major, ver->version_minor);
+		init_radeon(drm_fd, ver->version_major, ver->version_minor, family);
 	else if (strcmp(ver->name, "amdgpu") == 0)
 #ifdef ENABLE_AMDGPU
 		init_amdgpu(drm_fd);
@@ -236,7 +254,10 @@ static void open_drm_bus(const struct pci_device *dev) {
 
 	if (fd >= 0)
 		init_drm(fd);
-	else
+	else if (getvram == getuint64_null)
+		// Only worth reporting when no earlier DRM pass bound the
+		// memory counters; on the R300-class fallback path this open
+		// can fail after VRAM/GTT already bound through find_drm.
 		printf(_("Failed to open DRM node, no VRAM support.\n"));
 }
 
@@ -419,18 +440,34 @@ int getfamily(unsigned int id) {
 
 void initbits(int fam) {
 
+	bits.cp = bits.e2 = bits.rb2d = 0;
+
 	if (fam == RS480) {
 		// R300-class RBBM_STATUS (0x0E40) engine-busy layout, shared by
-		// RS400/RS480/RS482/RS485.  Map the R300 blocks onto radeontop's
-		// gauges; bits with no R300 analogue stay zero.
+		// RS400/RS480/RS482/RS485.  Every bit position below is the
+		// kernel's own decode (r300d.h S_000E40_* field macros).  Map the
+		// R300 blocks onto radeontop's gauges and give the blocks with no
+		// R600 analogue (the PM4 command stream and the 2D engine pair)
+		// their own lanes; bits with no R300 analogue stay zero.  PB_BUSY
+		// (bit 24) carries no kernel-documented block meaning and stays
+		// unmapped.
 		bits.gui = (1U << 31);  // GUI_ACTIVE -- any 2D/3D engine running
 		bits.vgt = (1U << 20);  // VAP_BUSY -- vertex assembly front-end
 		bits.pa  = (1U << 26);  // GA_BUSY -- geometry/primitive setup
-		bits.sc  = (1U << 21);  // RE_BUSY -- rasterizer (scan converter)
-		bits.ta  = (1U << 22) | (1U << 23) | (1U << 25);  // TAM|TDM|TIM
-		bits.cb  = (1U << 19);  // RB3D_BUSY -- render backend, colour writeback
-		bits.db  = (1U << 19);  // RB3D also drives depth writeback
-		bits.ee  = (1U << 16);  // CP_CMDSTRM_BUSY -- IB/command stream executing
+		bits.ee  = (1U << 15);  // ENG_EV_BUSY -- the event engine proper
+		bits.cp  = (1U << 16);  // CP_CMDSTRM_BUSY -- PM4 command stream executing
+		bits.e2  = (1U << 17);  // E2_BUSY -- the 2D draw engine
+		bits.rb2d = (1U << 18) | (1U << 27);  // RB2D|CBA2D -- 2D render backend
+		// The kernel decode also names RE_BUSY (21), TAM|TDM|TIM
+		// (22|23|25), and RB3D_BUSY (19), but on RS482 silicon those bits
+		// never assert -- a raw RBBM_STATUS histogram during a sustained
+		// 126-FPS textured 800x600 fill shows the busy word saturating at
+		// GUI|GA|CP_CMDSTRM|ENG_EV|CF_PIPE with the rasterizer, texture,
+		// and render-backend bits permanently clear.  Perpetual-zero
+		// gauges mislead, so those lanes stay masked off; the per-block
+		// cache status registers in the 0x4xxx window are the readable
+		// alternative and belong to the gated lane, not a poller.
+		bits.sc = bits.ta = bits.cb = bits.db = 0;
 		bits.tc = bits.sx = bits.sh = bits.spi = bits.smx = bits.cr = 0;
 		bits.uvd = 0;   // RS482 has no UVD -- the 3D pipe is the only decoder
 		bits.vce0 = 0;  // no VCE
